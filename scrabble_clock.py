@@ -1,0 +1,189 @@
+#!/usr/bin/env python3
+from rgbmatrix import RGBMatrix, RGBMatrixOptions
+from PIL import Image, ImageDraw, ImageFont
+import datetime
+import time
+
+# ----------------------
+# GRID CONFIGURATION
+# ----------------------
+GRID = [
+    "ITLISASTIME",
+    "ACQUARTERDC",
+    "TWENTYFIVEX",
+    "HALFBTENYTO",
+    "PASTERUNINE",
+    "ONESIXTHREE",
+    "FOURFIVETWO",
+    "EIGHTELEVEN",
+    "SEVENTWELVE",
+    "OCLOCKXXXXX"
+]
+
+ROWS = len(GRID)
+COLS = len(GRID[0])
+
+CELL_W = 6
+CELL_H = 3
+
+IMG_W = 64
+IMG_H = 32
+
+OFFSET_X = (IMG_W - COLS * CELL_W) // 2
+OFFSET_Y = 0
+
+# ----------------------
+# WORD MAPPINGS
+# ----------------------
+WORDS = {
+    "QUARTER":   [(1, 2, 1, 8)],
+    "TWENTY":    [(2, 0, 2, 5)],
+    "FIVE":      [(2, 6, 2, 9)],
+    "HALF":      [(3, 0, 3, 3)],
+    "TEN":       [(3, 4, 3, 6)],
+    "TO":        [(3, 9, 3, 10)],
+    "PAST":      [(4, 0, 4, 3)],
+    "ONE":       [(5, 0, 5, 2)],
+    "TWO":       [(6, 7, 6, 9)],
+    "THREE":     [(5, 4, 5, 8)],
+    "FOUR":      [(6, 0, 6, 3)],
+    "FIVE_H":    [(6, 4, 6, 7)],
+    "SIX":       [(5, 3, 5, 5)],
+    "SEVEN":     [(8, 0, 8, 4)],
+    "EIGHT":     [(7, 0, 7, 4)],
+    "NINE":      [(4, 6, 4, 9)],
+    "TEN_H":     [(3, 5, 3, 7)],  # hour TEN
+    "ELEVEN":    [(7, 5, 7, 10)],
+    "TWELVE":    [(8, 5, 8, 10)],
+    "OCLOCK":    [(9, 0, 9, 5)]
+}
+
+# ----------------------
+# HELPER FUNCTIONS
+# ----------------------
+def expand(word):
+    """Convert word mapping to list of coordinates."""
+    coords = []
+    for w in WORDS[word]:
+        if len(w) == 2:
+            coords.append(w)
+        elif len(w) == 3:
+            r, s, e = w
+            coords.extend([(r, c) for c in range(s, e + 1)])
+        elif len(w) == 4:
+            r1, c1, r2, c2 = w
+            for r in range(r1, r2 + 1):
+                for c in range(c1, c2 + 1):
+                    coords.append((r, c))
+    return coords
+
+def num_word(n, hour=False):
+    """Return word key for number n. Use _H for hours if needed."""
+    mapping = {
+        1: "ONE", 2: "TWO", 3: "THREE",
+        4: "FOUR", 5: "FIVE_H" if hour else "FIVE",
+        6: "SIX", 7: "SEVEN", 8: "EIGHT",
+        9: "NINE", 10: "TEN_H" if hour else "TEN",
+        11: "ELEVEN", 12: "TWELVE"
+    }
+    return mapping[n]
+
+def time_words():
+    """Return list of words to highlight for current time (rounded to nearest 5 min)."""
+    now = datetime.datetime.now()
+    h = now.hour % 12 or 12
+    m = now.minute
+    minute = (m // 5) * 5
+    next_hour = (h % 12) + 1
+
+    words = []
+
+    if minute == 0:
+        words += [num_word(h, hour=True), "OCLOCK"]
+    elif minute == 5:
+        words += ["FIVE", "PAST", num_word(h, hour=True)]
+    elif minute == 10:
+        words += ["TEN", "PAST", num_word(h, hour=True)]
+    elif minute == 15:
+        words += ["QUARTER", "PAST", num_word(h, hour=True)]
+    elif minute == 20:
+        words += ["TWENTY", "PAST", num_word(h, hour=True)]
+    elif minute == 25:
+        words += ["TWENTY", "FIVE", "PAST", num_word(h, hour=True)]
+    elif minute == 30:
+        words += ["HALF", "PAST", num_word(h, hour=True)]
+    elif minute == 35:
+        hour_word = num_word(next_hour, hour=True if next_hour in [5,10] else False)
+        words += ["TWENTY", "FIVE", "TO", hour_word]
+    elif minute == 40:
+        hour_word = num_word(next_hour, hour=True if next_hour in [5,10] else False)
+        words += ["TWENTY", "TO", hour_word]
+    elif minute == 45:
+        hour_word = num_word(next_hour, hour=True if next_hour in [5,10] else False)
+        words += ["QUARTER", "TO", hour_word]
+    elif minute == 50:
+        hour_word = num_word(next_hour, hour=True if next_hour in [5,10] else False)
+        words += ["TEN", "TO", hour_word]
+    elif minute == 55:
+        hour_word = num_word(next_hour, hour=True if next_hour in [5,10] else False)
+        words += ["FIVE", "TO", hour_word]
+
+    return words
+
+# ----------------------
+# MATRIX SETUP
+# ----------------------
+options = RGBMatrixOptions()
+options.rows = 32
+options.cols = 64
+options.chain_length = 1
+options.parallel = 1
+options.gpio_slowdown = 4
+matrix = RGBMatrix(options=options)
+
+font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", 5)
+
+# ----------------------
+# MAIN LOOP
+# ----------------------
+last_minute = -1
+
+while True:
+    now = datetime.datetime.now()
+    if now.minute != last_minute:
+        last_minute = now.minute
+        words = time_words()
+        img = Image.new("RGB", (IMG_W, IMG_H), "black")
+        draw = ImageDraw.Draw(img)
+
+        # Draw all letters dimmed
+        for r in range(ROWS):
+            for c in range(COLS):
+                x = OFFSET_X + c * CELL_W
+                y = OFFSET_Y + r * CELL_H
+                draw.text((x, y), GRID[r][c], fill=(50,50,50), font=font)
+
+        # Highlight active words
+        for w in words:
+            for r, c in expand(w):
+                x = OFFSET_X + c * CELL_W
+                y = OFFSET_Y + r * CELL_H
+                draw.text((x, y), GRID[r][c], fill=(255,255,255), font=font)
+
+        # Draw AM/PM 3x3 block top-right
+        block_size = 3
+        padding = 1  # space from edges
+        block_x = IMG_W - block_size - padding
+        block_y = padding
+
+        # Green for AM (0–11), Red for PM (12–23)
+        am_pm_color = (0, 255, 0) if now.hour < 12 else (255, 0, 0)
+
+        # Draw the block
+        draw.rectangle([block_x, block_y, block_x + block_size - 1, block_y + block_size - 1],
+                    fill=am_pm_color)
+
+
+        matrix.SetImage(img, 0, 0)
+
+    time.sleep(1)  # check every second for AM/PM
