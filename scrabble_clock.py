@@ -52,7 +52,7 @@ WORDS = {
     "SEVEN":     [(8, 0, 8, 4)],
     "EIGHT":     [(7, 0, 7, 4)],
     "NINE":      [(4, 6, 4, 9)],
-    "TEN_H":     [(3, 5, 3, 7)],  # hour TEN
+    "TEN_H":     [(3, 5, 3, 7)],
     "ELEVEN":    [(7, 5, 7, 10)],
     "TWELVE":    [(8, 5, 8, 10)],
     "OCLOCK":    [(9, 0, 9, 5)]
@@ -62,7 +62,6 @@ WORDS = {
 # HELPER FUNCTIONS
 # ----------------------
 def expand(word):
-    """Convert word mapping to list of coordinates."""
     coords = []
     for w in WORDS[word]:
         if len(w) == 2:
@@ -78,7 +77,6 @@ def expand(word):
     return coords
 
 def num_word(n, hour=False):
-    """Return word key for number n. Use _H for hours if needed."""
     mapping = {
         1: "ONE", 2: "TWO", 3: "THREE",
         4: "FOUR", 5: "FIVE_H" if hour else "FIVE",
@@ -89,29 +87,27 @@ def num_word(n, hour=False):
     return mapping[n]
 
 def time_words():
-    """Return list of words to highlight for current time (rounded to nearest 5 min)."""
     now = datetime.datetime.now()
     h = now.hour % 12 or 12
     m = now.minute
     minute = (m // 5) * 5
     next_hour = (h % 12) + 1
-
     words = []
 
     if minute == 0:
         words += [num_word(h, hour=True), "OCLOCK"]
     elif minute == 5:
-        words += ["FIVE", "PAST", num_word(h, hour=True)]
+        words += ["FIVE", "PAST", num_word(h)]
     elif minute == 10:
-        words += ["TEN", "PAST", num_word(h, hour=True)]
+        words += ["TEN", "PAST", num_word(h)]
     elif minute == 15:
-        words += ["QUARTER", "PAST", num_word(h, hour=True)]
+        words += ["QUARTER", "PAST", num_word(h)]
     elif minute == 20:
-        words += ["TWENTY", "PAST", num_word(h, hour=True)]
+        words += ["TWENTY", "PAST", num_word(h)]
     elif minute == 25:
-        words += ["TWENTY", "FIVE", "PAST", num_word(h, hour=True)]
+        words += ["TWENTY", "FIVE", "PAST", num_word(h)]
     elif minute == 30:
-        words += ["HALF", "PAST", num_word(h, hour=True)]
+        words += ["HALF", "PAST", num_word(h)]
     elif minute == 35:
         hour_word = num_word(next_hour, hour=True if next_hour in [5,10] else False)
         words += ["TWENTY", "FIVE", "TO", hour_word]
@@ -142,48 +138,56 @@ options.gpio_slowdown = 4
 matrix = RGBMatrix(options=options)
 
 font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", 5)
+block_size = 3
+padding = 1
 
 # ----------------------
 # MAIN LOOP
 # ----------------------
-last_minute = -1
-
 while True:
     now = datetime.datetime.now()
-    if now.minute != last_minute:
-        last_minute = now.minute
-        words = time_words()
-        img = Image.new("RGB", (IMG_W, IMG_H), "black")
-        draw = ImageDraw.Draw(img)
 
-        # Draw all letters dimmed
-        for r in range(ROWS):
-            for c in range(COLS):
-                x = OFFSET_X + c * CELL_W
-                y = OFFSET_Y + r * CELL_H
-                draw.text((x, y), GRID[r][c], fill=(50,50,50), font=font)
+    # Create a fresh image + draw context every cycle
+    img = Image.new("RGB", (IMG_W, IMG_H), (0,0,0))
+    draw = ImageDraw.Draw(img)
 
-        # Highlight active words
-        for w in words:
-            for r, c in expand(w):
-                x = OFFSET_X + c * CELL_W
-                y = OFFSET_Y + r * CELL_H
-                draw.text((x, y), GRID[r][c], fill=(255,255,255), font=font)
+    # Determine which words need highlighting
+    words = time_words()
 
-        # Draw AM/PM 3x3 block top-right
-        block_size = 3
-        padding = 1  # space from edges
-        block_x = IMG_W - block_size - padding
-        block_y = padding
+    # Draw all letters dimmed
+    for r in range(ROWS):
+        for c in range(COLS):
+            x = OFFSET_X + c * CELL_W
+            y = OFFSET_Y + r * CELL_H
+            draw.text((x, y), GRID[r][c], fill=(50,50,50), font=font)
 
-        # Green for AM (0–11), Red for PM (12–23)
-        am_pm_color = (0, 255, 0) if now.hour < 12 else (255, 0, 0)
+    # Highlight active words bright white
+    for w in words:
+        for rr, cc in expand(w):
+            x = OFFSET_X + cc * CELL_W
+            y = OFFSET_Y + rr * CELL_H
+            draw.text((x, y), GRID[rr][cc], fill=(255,255,255), font=font)
 
-        # Draw the block
-        draw.rectangle([block_x, block_y, block_x + block_size - 1, block_y + block_size - 1],
-                    fill=am_pm_color)
+    # Draw AM/PM 3x3 block (top-right)
+    block_x = IMG_W - block_size - padding
+    block_y = padding
 
+    # Green AM if hour < 12 OR hour == 0 (midnight)
+    hour24 = now.hour
+    is_am = (hour24 < 12)
 
-        matrix.SetImage(img, 0, 0)
+    # am_pm_color = (0,255,0) if is_am else (255,0,0)
+    am_pm_color = (0,255,0) if is_am else (255,0,0)
 
-    time.sleep(1)  # check every second for AM/PM
+    draw.rectangle(
+        [block_x, block_y, block_x + block_size - 1, block_y + block_size - 1],
+        fill=am_pm_color
+    )
+
+    # Push to LED panel
+    matrix.SetImage(img, 0, 0)
+
+    # Sleep until next minute
+    now = datetime.datetime.now()
+    sleep_seconds = 60 - now.second
+    time.sleep(sleep_seconds)
