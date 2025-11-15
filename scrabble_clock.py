@@ -59,6 +59,14 @@ WORDS = {
 }
 
 # ----------------------
+# BRAILLE MAPPING (2x3)
+# ----------------------
+BRAILLE = {
+    "A": [(0,0)],                        # dot 1
+    "P": [(0,0), (1,0), (2,0), (0,1)]   # dots 1,2,3,4
+}
+
+# ----------------------
 # HELPER FUNCTIONS
 # ----------------------
 def expand(word):
@@ -138,56 +146,40 @@ options.gpio_slowdown = 4
 matrix = RGBMatrix(options=options)
 
 font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", 5)
-block_size = 3
-padding = 1
 
 # ----------------------
 # MAIN LOOP
 # ----------------------
 while True:
+    # Sleep until start of next minute
     now = datetime.datetime.now()
+    seconds_to_next_minute = 60 - now.second
+    time.sleep(seconds_to_next_minute)
 
-    # Create a fresh image + draw context every cycle
-    img = Image.new("RGB", (IMG_W, IMG_H), (0,0,0))
-    draw = ImageDraw.Draw(img)
-
-    # Determine which words need highlighting
     words = time_words()
+    img = Image.new("RGB", (IMG_W, IMG_H), "black")
+    draw = ImageDraw.Draw(img)
 
     # Draw all letters dimmed
     for r in range(ROWS):
         for c in range(COLS):
-            x = OFFSET_X + c * CELL_W
-            y = OFFSET_Y + r * CELL_H
+            x = (IMG_W - COLS * CELL_W) // 2 + c * CELL_W
+            y = r * CELL_H
             draw.text((x, y), GRID[r][c], fill=(50,50,50), font=font)
 
-    # Highlight active words bright white
+    # Highlight active words
     for w in words:
-        for rr, cc in expand(w):
-            x = OFFSET_X + cc * CELL_W
-            y = OFFSET_Y + rr * CELL_H
-            draw.text((x, y), GRID[rr][cc], fill=(255,255,255), font=font)
+        for r, c in expand(w):
+            x = (IMG_W - COLS * CELL_W) // 2 + c * CELL_W
+            y = r * CELL_H
+            draw.text((x, y), GRID[r][c], fill=(255,255,255), font=font)
 
-    # Draw AM/PM 3x3 block (top-right)
-    block_x = IMG_W - block_size - padding
-    block_y = padding
+    # Draw AM/PM as Braille (2x3) top-right, always red
+    letter = "A" if now.hour < 12 else "P"
+    block_x = IMG_W - 3  # 2-wide block + margin
+    block_y = 0
+    for dy, dx in BRAILLE[letter]:
+        draw.point((block_x + dx, block_y + dy), fill=(255,0,0))
 
-    # Green AM if hour < 12 OR hour == 0 (midnight)
-    hour24 = now.hour
-    is_am = (hour24 < 12)
-
-    # am_pm_color = (0,255,0) if is_am else (255,0,0)
-    am_pm_color = (0,255,0) if is_am else (255,0,0)
-
-    draw.rectangle(
-        [block_x, block_y, block_x + block_size - 1, block_y + block_size - 1],
-        fill=am_pm_color
-    )
-
-    # Push to LED panel
+    # Update matrix
     matrix.SetImage(img, 0, 0)
-
-    # Sleep until next minute
-    now = datetime.datetime.now()
-    sleep_seconds = 60 - now.second
-    time.sleep(sleep_seconds)
