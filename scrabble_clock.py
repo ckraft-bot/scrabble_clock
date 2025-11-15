@@ -40,7 +40,7 @@ WORDS = {
     "TWENTY":    [(2, 0, 2, 5)],
     "FIVE":      [(2, 6, 2, 9)],
     "HALF":      [(3, 0, 3, 3)],
-    "TEN":       [(3, 4, 3, 6)],
+    "TEN":       [(3, 5, 3, 7)],
     "TO":        [(3, 9, 3, 10)],
     "PAST":      [(4, 0, 4, 3)],
     "ONE":       [(5, 0, 5, 2)],
@@ -52,17 +52,24 @@ WORDS = {
     "SEVEN":     [(8, 0, 8, 4)],
     "EIGHT":     [(7, 0, 7, 4)],
     "NINE":      [(4, 6, 4, 9)],
-    "TEN_H":     [(3, 5, 3, 7)],  # hour TEN
+    "TEN_H":     [(3, 5, 3, 7)],
     "ELEVEN":    [(7, 5, 7, 10)],
     "TWELVE":    [(8, 5, 8, 10)],
     "OCLOCK":    [(9, 0, 9, 5)]
 }
 
 # ----------------------
+# BRAILLE MAPPING (2x3)
+# ----------------------
+BRAILLE = {
+    "A": [(0,0)],                        # dot 1
+    "P": [(0,0), (1,0), (2,0), (0,1)]   # dots 1,2,3,4
+}
+
+# ----------------------
 # HELPER FUNCTIONS
 # ----------------------
 def expand(word):
-    """Convert word mapping to list of coordinates."""
     coords = []
     for w in WORDS[word]:
         if len(w) == 2:
@@ -78,7 +85,6 @@ def expand(word):
     return coords
 
 def num_word(n, hour=False):
-    """Return word key for number n. Use _H for hours if needed."""
     mapping = {
         1: "ONE", 2: "TWO", 3: "THREE",
         4: "FOUR", 5: "FIVE_H" if hour else "FIVE",
@@ -89,29 +95,27 @@ def num_word(n, hour=False):
     return mapping[n]
 
 def time_words():
-    """Return list of words to highlight for current time (rounded to nearest 5 min)."""
     now = datetime.datetime.now()
     h = now.hour % 12 or 12
     m = now.minute
     minute = (m // 5) * 5
     next_hour = (h % 12) + 1
-
     words = []
 
     if minute == 0:
         words += [num_word(h, hour=True), "OCLOCK"]
     elif minute == 5:
-        words += ["FIVE", "PAST", num_word(h, hour=True)]
+        words += ["FIVE", "PAST", num_word(h)]
     elif minute == 10:
-        words += ["TEN", "PAST", num_word(h, hour=True)]
+        words += ["TEN", "PAST", num_word(h)]
     elif minute == 15:
-        words += ["QUARTER", "PAST", num_word(h, hour=True)]
+        words += ["QUARTER", "PAST", num_word(h)]
     elif minute == 20:
-        words += ["TWENTY", "PAST", num_word(h, hour=True)]
+        words += ["TWENTY", "PAST", num_word(h)]
     elif minute == 25:
-        words += ["TWENTY", "FIVE", "PAST", num_word(h, hour=True)]
+        words += ["TWENTY", "FIVE", "PAST", num_word(h)]
     elif minute == 30:
-        words += ["HALF", "PAST", num_word(h, hour=True)]
+        words += ["HALF", "PAST", num_word(h)]
     elif minute == 35:
         hour_word = num_word(next_hour, hour=True if next_hour in [5,10] else False)
         words += ["TWENTY", "FIVE", "TO", hour_word]
@@ -146,44 +150,36 @@ font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
 # ----------------------
 # MAIN LOOP
 # ----------------------
-last_minute = -1
-
 while True:
+    # Sleep until start of next minute
     now = datetime.datetime.now()
-    if now.minute != last_minute:
-        last_minute = now.minute
-        words = time_words()
-        img = Image.new("RGB", (IMG_W, IMG_H), "black")
-        draw = ImageDraw.Draw(img)
+    seconds_to_next_minute = 60 - now.second
+    time.sleep(seconds_to_next_minute)
 
-        # Draw all letters dimmed
-        for r in range(ROWS):
-            for c in range(COLS):
-                x = OFFSET_X + c * CELL_W
-                y = OFFSET_Y + r * CELL_H
-                draw.text((x, y), GRID[r][c], fill=(50,50,50), font=font)
+    words = time_words()
+    img = Image.new("RGB", (IMG_W, IMG_H), "black")
+    draw = ImageDraw.Draw(img)
 
-        # Highlight active words
-        for w in words:
-            for r, c in expand(w):
-                x = OFFSET_X + c * CELL_W
-                y = OFFSET_Y + r * CELL_H
-                draw.text((x, y), GRID[r][c], fill=(255,255,255), font=font)
+    # Draw all letters dimmed
+    for r in range(ROWS):
+        for c in range(COLS):
+            x = (IMG_W - COLS * CELL_W) // 2 + c * CELL_W
+            y = r * CELL_H
+            draw.text((x, y), GRID[r][c], fill=(50,50,50), font=font)
 
-        # Draw AM/PM 3x3 block top-right
-        block_size = 3
-        padding = 1  # space from edges
-        block_x = IMG_W - block_size - padding
-        block_y = padding
+    # Highlight active words
+    for w in words:
+        for r, c in expand(w):
+            x = (IMG_W - COLS * CELL_W) // 2 + c * CELL_W
+            y = r * CELL_H
+            draw.text((x, y), GRID[r][c], fill=(255,255,255), font=font)
 
-        # Green for AM (0–11), Red for PM (12–23)
-        am_pm_color = (0, 255, 0) if now.hour < 12 else (255, 0, 0)
+    # Draw AM/PM as Braille (2x3) top-right, always red
+    letter = "A" if now.hour < 12 else "P"
+    block_x = IMG_W - 3  # 2-wide block + margin
+    block_y = 0
+    for dy, dx in BRAILLE[letter]:
+        draw.point((block_x + dx, block_y + dy), fill=(255,0,0))
 
-        # Draw the block
-        draw.rectangle([block_x, block_y, block_x + block_size - 1, block_y + block_size - 1],
-                    fill=am_pm_color)
-
-
-        matrix.SetImage(img, 0, 0)
-
-    time.sleep(1)  # check every second for AM/PM
+    # Update matrix
+    matrix.SetImage(img, 0, 0)
