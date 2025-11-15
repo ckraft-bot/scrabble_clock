@@ -64,11 +64,11 @@ Characters belonging to the selected time words are drawn bright white.
 
 ### AM/PM Indicator
 
-A small 3×3 block shows AM/PM status:
+Using the [braille](https://www.brailleliteracycanada.ca/en/braille) alphabet to show AM/PM status:
 
-* Green = AM
-* Red = PM
-  The block is positioned in the top-right corner.
+* A = AM
+* P = PM
+
 
 ### Matrix Update
 
