@@ -11,8 +11,8 @@ The program:
 * Renders a 10×11 letter grid.
 * Dims all unused characters.
 * Lights only the words describing the current time.
-* Shows a 3×3 AM/PM block in the top-right corner (green for AM, red for PM).
-* Updates every second.
+* Shows AM/PM indictoar in the top-right corner using the Braille alphabet("A" for AM, "p" for PM).
+* Updates every minute in 5 minute increments.
 
 ## Grid Layout
 
