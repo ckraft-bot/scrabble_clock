@@ -64,7 +64,7 @@ Characters belonging to the selected time words are drawn bright white.
 
 ### AM/PM Indicator
 
-Using the [braille](https://www.brailleliteracycanada.ca/en/braille) alphabet to show AM/PM status:
+Using the [braille](https://www.brailleliteracycanada.ca/en/braille) alphabet to show AM/PM status in red:
 
 * A = AM
   [![example](Media/oclock.jpeg)](Media/oclock.jpeg)
