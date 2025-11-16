@@ -19,16 +19,16 @@ The program:
 A static 10×11 character map forms the basis of the word clock:
 
 ```
-ITLISASTIME
-ACQUARTERDC
-TWENTYFIVEX
-HALFBTENYTO
-PASTERUNINE
-ONESIXTHREE
-FOURFIVETWO
-EIGHTELEVEN
-SEVENTWELVE
-OCLOCKXXXXX
+"ITLISASTIME",   # ROW 0 — IGNORED
+"ACQUARTERDC",
+"TWENTYFIVEX",
+"HALFBTENYTO",
+"PASTERUNINE",
+"ONESIXTHREE",
+"FOURFIVETWO",
+"EIGHTELEVEN",
+"SEVENTWELVE",
+"OCLOCKXXXXX"
 ```
 
 Letters are placed with fixed spacing and centered in a 64×32 matrix using defined cell size and offsets.
