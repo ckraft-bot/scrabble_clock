@@ -29,7 +29,7 @@ CELL_H = 3
 IMG_W = 64
 IMG_H = 32
 
-OFFSET_X = (IMG_W - COLS * CELL_W) // 2
+OFFSET_X = (IMG_W - COLS * CELL_W) // 2 + 2 # shifted the whole grid 2 pixels to the right so the words are within frmae
 
 # ----------------------
 # WORD MAPPINGS
