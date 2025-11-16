@@ -68,9 +68,9 @@ Characters belonging to the selected time words are drawn bright white.
 Using the [braille](https://www.brailleliteracycanada.ca/en/braille) alphabet to show AM/PM status in red:
 
 * A = AM
-  [![example](Media/oclock.jpeg)](Media/AM.jpeg)
+  [![example](Media/AM.jpeg)](Media/AM.jpeg)
 * P = PM
-  [![example](Media/quarter_past.jpeg)](Media/PM.jpeg)
+  [![example](Media/PM.jpeg)](Media/PM.jpeg)
 
 
 ### Matrix Update
