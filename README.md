@@ -9,7 +9,7 @@ This project drives a 64×32 RGB LED matrix to display a word-clock. The display
 
 The program:
 
-* Renders a 10×11 letter grid.
+* Renders a 9x11 letter grid.
 * Dims all unused characters.
 * Lights only the words describing the current time.
 * Shows AM/PM indictoar in the top-right corner using the Braille alphabet("A" for AM, "p" for PM).
@@ -17,7 +17,7 @@ The program:
 
 ## Grid Layout
 
-A static 10×11 character map forms the basis of the word clock:
+A static 9x11 character map forms the basis of the word clock:
 
 ```
 "ITLISASTIME",   # ROW 0 — IGNORED
