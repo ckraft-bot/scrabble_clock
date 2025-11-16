@@ -1,4 +1,5 @@
 # Scrabble Clock
+[![scrabble clocl](Media/quarter_to.jpeg)](Media/quarter_to.jpeg)
 
 # Word Clock Display
 
@@ -67,9 +68,9 @@ Characters belonging to the selected time words are drawn bright white.
 Using the [braille](https://www.brailleliteracycanada.ca/en/braille) alphabet to show AM/PM status in red:
 
 * A = AM
-  [![example](Media/oclock.jpeg)](Media/oclock.jpeg)
+  [![example](Media/oclock.jpeg)](Media/AM.jpeg)
 * P = PM
-  [![example](Media/quarter_past.jpeg)](Media/quarter_past.jpeg)
+  [![example](Media/quarter_past.jpeg)](Media/PM.jpeg)
 
 
 ### Matrix Update
