@@ -8,7 +8,7 @@ import time
 # GRID CONFIGURATION
 # ----------------------
 GRID = [
-    "ITLISASTIME",
+    "ITLISASTIME",   # ROW 0 — IGNORED
     "ACQUARTERDC",
     "TWENTYFIVEX",
     "HALFBTENYTO",
@@ -30,7 +30,6 @@ IMG_W = 64
 IMG_H = 32
 
 OFFSET_X = (IMG_W - COLS * CELL_W) // 2
-OFFSET_Y = 0
 
 # ----------------------
 # WORD MAPPINGS
@@ -59,15 +58,15 @@ WORDS = {
 }
 
 # ----------------------
-# BRAILLE MAPPING (2x3)
+# BRAILLE (2×3)
 # ----------------------
 BRAILLE = {
-    "A": [(0,0)],                        # dot 1
-    "P": [(0,0), (1,0), (2,0), (0,1)]   # dots 1,2,3,4
+    "A": [(0,0)],
+    "P": [(0,0), (1,0), (2,0), (0,1)]
 }
 
 # ----------------------
-# HELPER FUNCTIONS
+# HELPERS
 # ----------------------
 def expand(word):
     coords = []
@@ -117,19 +116,19 @@ def time_words():
     elif minute == 30:
         words += ["HALF", "PAST", num_word(h)]
     elif minute == 35:
-        hour_word = num_word(next_hour, hour=True if next_hour in [5,10] else False)
+        hour_word = num_word(next_hour, hour=next_hour in [5,10])
         words += ["TWENTY", "FIVE", "TO", hour_word]
     elif minute == 40:
-        hour_word = num_word(next_hour, hour=True if next_hour in [5,10] else False)
+        hour_word = num_word(next_hour, hour=next_hour in [5,10])
         words += ["TWENTY", "TO", hour_word]
     elif minute == 45:
-        hour_word = num_word(next_hour, hour=True if next_hour in [5,10] else False)
+        hour_word = num_word(next_hour, hour=next_hour in [5,10])
         words += ["QUARTER", "TO", hour_word]
     elif minute == 50:
-        hour_word = num_word(next_hour, hour=True if next_hour in [5,10] else False)
+        hour_word = num_word(next_hour, hour=next_hour in [5,10])
         words += ["TEN", "TO", hour_word]
     elif minute == 55:
-        hour_word = num_word(next_hour, hour=True if next_hour in [5,10] else False)
+        hour_word = num_word(next_hour, hour=next_hour in [5,10])
         words += ["FIVE", "TO", hour_word]
 
     return words
@@ -140,8 +139,6 @@ def time_words():
 options = RGBMatrixOptions()
 options.rows = 32
 options.cols = 64
-options.chain_length = 1
-options.parallel = 1
 options.gpio_slowdown = 4
 matrix = RGBMatrix(options=options)
 
@@ -151,35 +148,37 @@ font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
 # MAIN LOOP
 # ----------------------
 while True:
-    # Sleep until start of next minute
     now = datetime.datetime.now()
-    seconds_to_next_minute = 60 - now.second
-    time.sleep(seconds_to_next_minute)
+    time.sleep(60 - now.second)
 
+    now = datetime.datetime.now()
     words = time_words()
     img = Image.new("RGB", (IMG_W, IMG_H), "black")
     draw = ImageDraw.Draw(img)
 
-    # Draw all letters dimmed
-    for r in range(ROWS):
+    # --- DRAW ALL LETTERS (skip row 0, shift up)
+    for r in range(1, ROWS):
         for c in range(COLS):
-            x = (IMG_W - COLS * CELL_W) // 2 + c * CELL_W
-            y = r * CELL_H
+            x = OFFSET_X + c * CELL_W
+            y = (r - 1) * CELL_H
             draw.text((x, y), GRID[r][c], fill=(50,50,50), font=font)
 
-    # Highlight active words
+    # --- HIGHLIGHTS
     for w in words:
         for r, c in expand(w):
-            x = (IMG_W - COLS * CELL_W) // 2 + c * CELL_W
-            y = r * CELL_H
+            if r == 0:
+                continue
+            x = OFFSET_X + c * CELL_W
+            y = (r - 1) * CELL_H
             draw.text((x, y), GRID[r][c], fill=(255,255,255), font=font)
 
-    # Draw AM/PM as Braille (2x3) top-right, always red
+    # --- AM/PM BRAILLE (always red)
     letter = "A" if now.hour < 12 else "P"
-    block_x = IMG_W - 3  # 2-wide block + margin
+    block_x = IMG_W - 3
     block_y = 0
     for dy, dx in BRAILLE[letter]:
         draw.point((block_x + dx, block_y + dy), fill=(255,0,0))
 
-    # Update matrix
-    matrix.SetImage(img, 0, 0)
+    # --- CROP SO BOTTOM 2 LED ROWS ARE UNUSED
+    safe = img.crop((0, 0, IMG_W, 30))
+    matrix.SetImage(safe, 0, 0)
