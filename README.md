@@ -3,7 +3,7 @@
 
 # Word Clock Display
 
-This project drives a 64×32 RGB LED matrix to display a word-clock. The display highlights only the words that represent the current time in five-minute increments. It also includes a 3×3 AM/PM indicator block.
+This project drives a 64×32 RGB LED matrix to display a word-clock. The display highlights only the words that represent the current time in five-minute increments. It also includes a red AM/PM indicator.
 
 ## Overview
 
