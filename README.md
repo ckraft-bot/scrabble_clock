@@ -75,7 +75,7 @@ Using the [braille](https://www.brailleliteracycanada.ca/en/braille) alphabet to
 
 ### Matrix Update
 
-The final image is sent to the LED matrix each second.
+The final image is sent to the LED matrix each minute.
 
 ## Main Loop
 
@@ -84,5 +84,4 @@ The program:
 1. Computes the words for the current time.
 2. Draws the full image (dim text, highlighted words, AM/PM block).
 3. Sends the image to the matrix.
-4. Sleeps for one second.
 
