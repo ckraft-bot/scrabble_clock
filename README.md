@@ -1,5 +1,8 @@
 # Scrabble Clock
-[![scrabble clocl](Media/quarter_to.jpeg)](Media/quarter_to.jpeg)
+<p align="center">
+  <img src="Media/frame_front.jpeg" alt="scrabble clock with frame front" width="45%" />
+  <img src="Media/frame_side.jpeg" alt="scrabble clock with frame side" width="45%" />
+</p>
 
 # Word Clock Display
 
